@@ -8,42 +8,69 @@
 
 #define BOARDSIZE 8
 
-char board[BOARDSIZE][BOARDSIZE];
+typedef char Name[25];
+
+typedef struct {
+    int row;
+    int col;
+    bool isAlive;
+    char type; // n = normal, k = king, b = blank
+    char side;
+} Piece;
+
+Piece board[BOARDSIZE][BOARDSIZE];
+Piece list[24];
 int xNum = 12;
 int oNum = 12;
+
+int count = 0;
+void makePiece(int row, int col, char side) {
+    Piece piece;
+    piece.row = row;
+    piece.col = col;
+    if (side == ' ') {
+        piece.isAlive = false;
+        piece.side = 'b';
+    } else {
+        piece.isAlive = true;
+        piece.side = side;
+    }
+    board[row][col] = piece;
+    list[count] = piece;
+}
 
 void makeBoard() {
     for (int i = 0; i < BOARDSIZE; ++i) {
         for (int j = 0; j < BOARDSIZE; ++j) {
             if (i == 1) {
                 if (j % 2 == 0) {
-                    board[i][j] = 'O';
+                    makePiece(i, j, 'O');
                 } else {
-                    board[i][j] = ' ';
+                    makePiece(i, j, ' ');
                 }
             }
             else if (i < 3) {
                 if (j % 2 == 1) {
-                    board[i][j] = 'O';
+                    makePiece(i, j, 'O');
                 } else {
-                    board[i][j] = ' ';
+                    makePiece(i, j, ' ');
                 }
             }
             else if (i == 6) {
                 if (j % 2 == 1) {
-                    board[i][j] = 'X';
+                    makePiece(i, j, 'X');
                 } else {
-                    board[i][j] = ' ';
+                    makePiece(i, j, ' ');
                 }
             }
             else if (i > 4) {
                 if (j % 2 == 0) {
-                    board[i][j] = 'X';
+                    makePiece(i, j, 'X');
                 } else {
-                    board[i][j] = ' ';
+                    makePiece(i, j, ' ');
                 }
             } else {
-                board[i][j] = ' ';
+                makePiece(i, j, ' ');
             }
         }
     }
@@ -54,7 +81,7 @@ void printBoard() {
     for (int i = 0; i < BOARDSIZE; ++i) {
         printf("   - - - - - - - -\n%c |",i+65);
         for (int j = 0; j < BOARDSIZE; ++j) {
-            printf("%c|", board[i][j]);
+            printf("%c|", board[i][j].side);
         }
         printf("\n");
     }
@@ -122,7 +149,7 @@ void checkMove(char indicator[], char p, int* result) {
         checkBounds(indicator, &row, &col);
         int value = strcmp(indicator, "from");
         if (value == 0) {
-            if (board[row][col] == p) {
+            if (board[row][col].side == p) {
                 validResult = true;
                 result[0] = row;
                 result[1] = col;
@@ -130,7 +157,7 @@ void checkMove(char indicator[], char p, int* result) {
                 printf("Invalid option\n");
             }
         } else {
-            if (board[row][col] == ' ') {
+            if (board[row][col].side == ' ') {
                 validResult = true;
                 result[0] = row;
                 result[1] = col;
@@ -141,41 +168,136 @@ void checkMove(char indicator[], char p, int* result) {
     }
 }
 
-bool checkValid(const int from[], const int to[]) {
-    // TODO
-    // if you can jump then have to
+void moveToSide(Piece fromPiece, Piece toPiece) {
+    toPiece.side = fromPiece.side;
+    fromPiece.side = ' ';
+    toPiece.isAlive = true;
+    fromPiece.isAlive = false;
+    toPiece.type = fromPiece.type;
+    fromPiece.type = 'b';
+    if ((toPiece.side == 'O' && toPiece.row == BOARDSIZE-1) || (toPiece.side == 'X' && toPiece.row == 0)) {
+        toPiece.type = 'k';
+    }
+}
 
-    // jump over
+void jumpMove(Piece fromPiece, Piece toPiece, Piece middlePiece) {
+    if (middlePiece.side == 'O') {
+        oNum--;
+    } else if (middlePiece.side == 'X') {
+        xNum--;
+    }
+    moveToSide(fromPiece, toPiece);
+    middlePiece.side = ' ';
+    middlePiece.isAlive = false;
+    middlePiece.type = 'b';
 
-    // same piece double jump
+}
+
+bool checkValid(const int from[], const int to[], char currentSide) {
+    bool jump = false;
+    Piece fromPiece = board[from[0]][from[1]];
+    Piece toPiece = board[to[0]][to[1]];
+    char otherSide;
+
+    if (currentSide == 'O') {
+        otherSide = 'X';
+    }
+    else if (currentSide == 'X') {
+        otherSide = 'O';
+    } else {
+        return false;
+    }
+
+    if (fromPiece.side == ' ' || toPiece.side != ' ') {
+        return false;
+    }
 
     // move to the side one
+    if ((fromPiece.row+1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row+1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            moveToSide(fromPiece, toPiece);
+            return true;
+        }
+        return false;
+    }
+    else if ((fromPiece.row-1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row-1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            moveToSide(fromPiece, toPiece);
+            return true;
+        }
+        return false;
+    }
 
+    // jump over
+    if (fromPiece.row+2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            Piece middlePiece = board[fromPiece.row+1][fromPiece.col+1];
+            if (middlePiece.side != otherSide) {
+                return false;
+            }
+            jumpMove(fromPiece, toPiece, middlePiece);
+            jump = true;
+        }
+        return false;
+    }
+    else if (fromPiece.row-2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            Piece middlePiece = board[fromPiece.row-1][fromPiece.col+1];
+            if (middlePiece.side != otherSide) {
+                return false;
+            }
+            jumpMove(fromPiece, toPiece, middlePiece);
+            jump = true;
+        }
+        return false;
+    }
+    else if (fromPiece.row+2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            Piece middlePiece = board[fromPiece.row+1][fromPiece.col-1];
+            if (middlePiece.side != otherSide) {
+                return false;
+            }
+            jumpMove(fromPiece, toPiece, middlePiece);
+            jump = true;
+        }
+        return false;
+    }
+    else if (fromPiece.row-2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            Piece middlePiece = board[fromPiece.row-1][fromPiece.col-1];
+            if (middlePiece.side != otherSide) {
+                return false;
+            }
+            jumpMove(fromPiece, toPiece, middlePiece);
+            jump = true;
+        }
+        return false;
+    }
 
+    if (jump) {
+
+        return true;
+    }
+
+    return false;
 }
 
-void move(const int from[], const int to[]) {
-    board[to[0]][to[1]] = board[from[0]][from[1]];
-    board[from[0]][from[1]] = ' ';
-}
-
-void makeMove(char name[25], char p) {
+void makeMove(Name name, char currentSide) {
     bool valid = false;
     int fromResult[2];
     int toResult[2];
     while (!valid) {
         printf("%s turn", name);
         char fromIndicator[] = "from";
-        checkMove(fromIndicator, p, fromResult);
+        checkMove(fromIndicator, currentSide, fromResult);
         char toIndicator[] = "to";
-        checkMove(toIndicator, p, toResult);
-        if (checkValid(fromResult, toResult)) {
+        checkMove(toIndicator, currentSide, toResult);
+        if (checkValid(fromResult, toResult, currentSide)) {
             valid = true;
         } else {
             printf("Invalid option\n");
         }
     }
-    move(fromResult, toResult);
 }
 
 bool checkWinner() {
@@ -187,9 +309,9 @@ bool checkWinner() {
     return 0;
 }
 
-bool go(char name[], char p) {
+bool go(char name[], char currentSide) {
     printBoard();
-    makeMove(name, p);
+    makeMove(name, currentSide);
     if (checkWinner()) {
         printf("%s won!", name);
         return true;
@@ -198,8 +320,8 @@ bool go(char name[], char p) {
 }
 
 void play() {
-    char name1[25];
-    char name2[25];
+    Name name1;
+    Name name2;
     printf("Player1 name: ");
     scanf("%s", name1);
     printf("\n");
