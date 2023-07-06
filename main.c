@@ -9,13 +9,19 @@
 #define BOARDSIZE 8
 
 typedef char Name[25];
+
 typedef struct {
     int row;
     int col;
     bool isAlive;
     char type; // n = normal, k = king, b = blank
-    char side;
+    char side; // O, X, ' '
 } Piece;
+
+typedef struct {
+    bool valid;
+    Piece middle;
+} Pair;
 
 Piece board[BOARDSIZE][BOARDSIZE];
 Piece list[24];
@@ -88,7 +94,9 @@ void printBoard() {
     printf("   - - - - - - - -\n");
 }
 
-void checkBounds(const char *indicator, int *row, int *col) {
+Piece checkBounds(const char *indicator) {
+    int row;
+    int col;
     bool validRow = false;
     bool validCol = false;
     while (!validRow && !validCol) {
@@ -97,7 +105,7 @@ void checkBounds(const char *indicator, int *row, int *col) {
         scanf("%s", move);
         printf("\n");
         if (((int)move[1]) - 1 < 8 && ((int)move[1]) - 1 >= 0) {
-            (*col) = ((int)move[1]) - 1;
+            col = ((int)move[1]) - 1;
             validCol = true;
         } else {
             printf("Invalid cell\n");
@@ -105,69 +113,211 @@ void checkBounds(const char *indicator, int *row, int *col) {
         switch (move[0]) {
             case 'A':
                 validRow = true;
-                (*row) = 0;
+                row = 0;
                 break;
             case 'B':
                 validRow = true;
-                (*row) = 1;
+                row = 1;
                 break;
             case 'C':
                 validRow = true;
-                (*row) = 2;
+                row = 2;
                 break;
             case 'D':
                 validRow = true;
-                (*row) = 3;
+                row = 3;
                 break;
             case 'E':
                 validRow = true;
-                (*row) = 4;
+                row = 4;
                 break;
             case 'F':
                 validRow = true;
-                (*row) = 5;
+                row = 5;
                 break;
             case 'G':
                 validRow = true;
-                (*row) = 6;
+                row = 6;
                 break;
             case 'H':
                 validRow = true;
-                (*row) = 7;
+                row = 7;
                 break;
             default:
                 printf("Invalid cell\n");
         }
     }
+    return board[row][col];
 }
 
-void moveToSide(Piece fromPiece, Piece toPiece) {
-    toPiece.side = fromPiece.side;
-    fromPiece.side = ' ';
-    toPiece.isAlive = true;
-    fromPiece.isAlive = false;
-    toPiece.type = fromPiece.type;
-    fromPiece.type = 'b';
+void slide(Piece fromPiece, Piece toPiece) {
+    Piece temp = toPiece;
+    toPiece = fromPiece;
+    fromPiece = temp;
     if ((toPiece.side == 'O' && toPiece.row == BOARDSIZE-1) || (toPiece.side == 'X' && toPiece.row == 0)) {
         toPiece.type = 'k';
     }
 }
 
-void jumpMove(Piece fromPiece, Piece toPiece, Piece middlePiece) {
+void jump(Piece fromPiece, Piece toPiece, Piece middlePiece) {
     if (middlePiece.side == 'O') {
         oNum--;
     } else if (middlePiece.side == 'X') {
         xNum--;
     }
-    moveToSide(fromPiece, toPiece);
+    slide(fromPiece, toPiece);
     middlePiece.side = ' ';
     middlePiece.isAlive = false;
     middlePiece.type = 'b';
 
 }
 
-bool checkValid(Piece fromPiece, Piece toPiece, char currentSide) {
-    bool jump = false;
+Pair isJump(Piece fromPiece, Piece toPiece, char otherSide) {
+    Pair pair;
+    pair.valid = false;
+    if (fromPiece.side == ' ' || toPiece.side != ' ') {
+        return pair;
+    }
+    if (fromPiece.row+2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            Piece middlePiece = board[fromPiece.row+1][fromPiece.col+1];
+            pair.middle = middlePiece;
+            if (middlePiece.side != otherSide) {
+                pair.valid = false;
+                return pair;
+            }
+            pair.valid = true;
+            return pair;
+        }
+    }
+    else if (fromPiece.row-2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            Piece middlePiece = board[fromPiece.row-1][fromPiece.col+1];
+            if (middlePiece.side != otherSide) {
+                pair.valid = false;
+                return pair;
+            }
+            pair.valid = true;
+            return pair;
+        }
+    }
+    else if (fromPiece.row+2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            Piece middlePiece = board[fromPiece.row+1][fromPiece.col-1];
+            if (middlePiece.side != otherSide) {
+                pair.valid = false;
+                return pair;
+            }
+            pair.valid = true;
+            return pair;
+        }
+    }
+    else if (fromPiece.row-2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            Piece middlePiece = board[fromPiece.row-1][fromPiece.col-1];
+            if (middlePiece.side != otherSide) {
+                pair.valid = false;
+                return pair;
+            }
+            pair.valid = true;
+            return pair;
+        }
+    }
+    return pair;
+}
+
+bool isSlide(Piece fromPiece, Piece toPiece) {
+    if (fromPiece.side == ' ' || toPiece.side != ' ') {
+        return false;
+    }
+    if ((fromPiece.row+1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row+1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
+        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
+            return true;
+        }
+        return false;
+    }
+    else if ((fromPiece.row-1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row-1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
+        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
+            return true;
+        }
+        return false;
+    }
+    return false;
+}
+
+Pair canJump(Piece piece, char otherSide) {
+
+    Pair bottomRight = isJump(piece, board[piece.row+2][piece.col+2], otherSide);
+    if (bottomRight.valid) {
+        return bottomRight;
+    }
+
+    Pair topRight = isJump(piece, board[piece.row-2][piece.col+2], otherSide);
+    if (topRight.valid) {
+        return topRight;
+    }
+
+    Pair bottomLeft = isJump(piece, board[piece.row+2][piece.col-2], otherSide);
+    if (bottomLeft.valid) {
+        return bottomLeft;
+    }
+
+    Pair topLeft = isJump(piece, board[piece.row-2][piece.col-2], otherSide);
+    if (topLeft.valid) {
+        return topLeft;
+    }
+
+    Pair none;
+    none.valid = false;
+    return none;
+}
+
+void getUserCoordinates(Piece piece, char cord[]) {
+    switch (piece.row) {
+
+    }
+    switch (piece.col) {
+
+    }
+
+}
+
+void jumping(Piece fromPiece, Piece toPiece, char currentSide, char otherSide) {
+    while (true) {
+        Pair pair = isJump(fromPiece, toPiece, otherSide);
+        if (pair.valid) {
+            jump(fromPiece, toPiece, pair.middle);
+            fromPiece = toPiece;
+            while (canJump(fromPiece, currentSide).valid) {
+                printBoard();
+                char option;
+                printf("Jump Again? (y/n): \n");
+                scanf("%c", &option);
+                printf("\n");
+                if (option == 'y') {
+                    char cords[2];
+                    getUserCoordinates(fromPiece, cords);
+                    printf("Start %s\n", cords);
+                    toPiece = checkBounds("to");
+                } else {
+                    break;
+                }
+            }
+        } else {
+            char option;
+            printf("Invalid jump\n");
+            printf("stop (y/n): ");
+            scanf("%c", &option);
+            printf("\n");
+            if (option == 'y') {
+                break;
+            }
+        }
+    }
+}
+
+bool move(Piece fromPiece, Piece toPiece, char currentSide) {
+
     char otherSide;
 
     if (currentSide == 'O') {
@@ -183,114 +333,42 @@ bool checkValid(Piece fromPiece, Piece toPiece, char currentSide) {
         return false;
     }
 
-    // move to the side one
-    if ((fromPiece.row+1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row+1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
-        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
-            moveToSide(fromPiece, toPiece);
-            return true;
-        }
-        return false;
+    if (!isSlide(fromPiece, toPiece)) {
+        jumping(fromPiece, toPiece, currentSide, otherSide);
+    } else {
+        slide(fromPiece, toPiece);
     }
-    else if ((fromPiece.row-1 == toPiece.row && fromPiece.col+1 == toPiece.col) || (fromPiece.row-1 == toPiece.row && fromPiece.col-1 == toPiece.col)) {
-        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
-            moveToSide(fromPiece, toPiece);
-            return true;
-        }
-        return false;
-    }
-
-    // jump over
-    if (fromPiece.row+2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
-        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
-            Piece middlePiece = board[fromPiece.row+1][fromPiece.col+1];
-            if (middlePiece.side != otherSide) {
-                return false;
-            }
-            jumpMove(fromPiece, toPiece, middlePiece);
-            jump = true;
-        }
-        return false;
-    }
-    else if (fromPiece.row-2 == toPiece.row && fromPiece.col+2 == toPiece.col) {
-        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
-            Piece middlePiece = board[fromPiece.row-1][fromPiece.col+1];
-            if (middlePiece.side != otherSide) {
-                return false;
-            }
-            jumpMove(fromPiece, toPiece, middlePiece);
-            jump = true;
-        }
-        return false;
-    }
-    else if (fromPiece.row+2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
-        if ((fromPiece.side == 'O' && (fromPiece.type == 'n' || fromPiece.type == 'k')) || (fromPiece.side == 'X' && fromPiece.type == 'k')) {
-            Piece middlePiece = board[fromPiece.row+1][fromPiece.col-1];
-            if (middlePiece.side != otherSide) {
-                return false;
-            }
-            jumpMove(fromPiece, toPiece, middlePiece);
-            jump = true;
-        }
-        return false;
-    }
-    else if (fromPiece.row-2 == toPiece.row && fromPiece.col-2 == toPiece.col) {
-        if ((fromPiece.side == 'O' && fromPiece.type == 'k') || (fromPiece.side == 'X' && (fromPiece.type == 'k' || fromPiece.type == 'n'))) {
-            Piece middlePiece = board[fromPiece.row-1][fromPiece.col-1];
-            if (middlePiece.side != otherSide) {
-                return false;
-            }
-            jumpMove(fromPiece, toPiece, middlePiece);
-            jump = true;
-        }
-        return false;
-    }
-
-    if (jump) {
-
-        return true;
-    }
-
-    return false;
+    return true;
 }
 
-Piece getPiece(const int result[]) {
-    return board[result[0]][result[1]];
-}
-
-Piece checkMove(char indicator[], char currentSide) {
+Piece getChoice(char indicator[], char currentSide) {
     bool validResult = false;
-    int result[2];
+    Piece piece;
     while (!validResult) {
-        int row;
-        int col;
-        checkBounds(indicator, &row, &col);
+        piece = checkBounds(indicator);
         int value = strcmp(indicator, "from");
         if (value == 0) {
-            if (board[row][col].side == currentSide) {
+            if (piece.side == currentSide) {
                 validResult = true;
-                result[0] = row;
-                result[1] = col;
             } else {
                 printf("Invalid option\n");
             }
         } else {
-            if (board[row][col].side == ' ') {
+            if (piece.side == ' ') {
                 validResult = true;
-                result[0] = row;
-                result[1] = col;
             } else {
                 printf("Invalid option\n");
             }
         }
     }
-    return getPiece(result);
+    return piece;
 }
 
 void makeMove(Name name, char currentSide) {
     bool valid = false;
     while (!valid) {
         printf("%s turn", name);
-        if (checkValid(checkMove("from", currentSide), checkMove("to", currentSide), currentSide)) {
+        if (move(getChoice("from", currentSide), getChoice("to", currentSide), currentSide)) {
             valid = true;
         } else {
             printf("Invalid option\n");
