@@ -9,7 +9,6 @@
 #define BOARDSIZE 8
 
 typedef char Name[25];
-
 typedef struct {
     int row;
     int col;
@@ -23,8 +22,7 @@ Piece list[24];
 int xNum = 12;
 int oNum = 12;
 
-int count = 0;
-void makePiece(int row, int col, char side) {
+void makePiece(int row, int col, char side, int count) {
     Piece piece;
     piece.row = row;
     piece.col = col;
@@ -40,38 +38,40 @@ void makePiece(int row, int col, char side) {
 }
 
 void makeBoard() {
+    int count = 0;
     for (int i = 0; i < BOARDSIZE; ++i) {
         for (int j = 0; j < BOARDSIZE; ++j) {
             if (i == 1) {
                 if (j % 2 == 0) {
-                    makePiece(i, j, 'O');
+                    makePiece(i, j, 'O', count);
                 } else {
-                    makePiece(i, j, ' ');
+                    makePiece(i, j, ' ', count);
                 }
             }
             else if (i < 3) {
                 if (j % 2 == 1) {
-                    makePiece(i, j, 'O');
+                    makePiece(i, j, 'O', count);
                 } else {
-                    makePiece(i, j, ' ');
+                    makePiece(i, j, ' ', count);
                 }
             }
             else if (i == 6) {
                 if (j % 2 == 1) {
-                    makePiece(i, j, 'X');
+                    makePiece(i, j, 'X', count);
                 } else {
-                    makePiece(i, j, ' ');
+                    makePiece(i, j, ' ', count);
                 }
             }
             else if (i > 4) {
                 if (j % 2 == 0) {
-                    makePiece(i, j, 'X');
+                    makePiece(i, j, 'X', count);
                 } else {
-                    makePiece(i, j, ' ');
+                    makePiece(i, j, ' ', count);
                 }
             } else {
-                makePiece(i, j, ' ');
+                makePiece(i, j, ' ', count);
             }
+            count++;
         }
     }
 }
@@ -141,33 +141,6 @@ void checkBounds(const char *indicator, int *row, int *col) {
     }
 }
 
-void checkMove(char indicator[], char p, int* result) {
-    bool validResult = false;
-    while (!validResult) {
-        int row;
-        int col;
-        checkBounds(indicator, &row, &col);
-        int value = strcmp(indicator, "from");
-        if (value == 0) {
-            if (board[row][col].side == p) {
-                validResult = true;
-                result[0] = row;
-                result[1] = col;
-            } else {
-                printf("Invalid option\n");
-            }
-        } else {
-            if (board[row][col].side == ' ') {
-                validResult = true;
-                result[0] = row;
-                result[1] = col;
-            } else {
-                printf("Invalid option\n");
-            }
-        }
-    }
-}
-
 void moveToSide(Piece fromPiece, Piece toPiece) {
     toPiece.side = fromPiece.side;
     fromPiece.side = ' ';
@@ -193,10 +166,8 @@ void jumpMove(Piece fromPiece, Piece toPiece, Piece middlePiece) {
 
 }
 
-bool checkValid(const int from[], const int to[], char currentSide) {
+bool checkValid(Piece fromPiece, Piece toPiece, char currentSide) {
     bool jump = false;
-    Piece fromPiece = board[from[0]][from[1]];
-    Piece toPiece = board[to[0]][to[1]];
     char otherSide;
 
     if (currentSide == 'O') {
@@ -282,17 +253,44 @@ bool checkValid(const int from[], const int to[], char currentSide) {
     return false;
 }
 
+Piece getPiece(const int result[]) {
+    return board[result[0]][result[1]];
+}
+
+Piece checkMove(char indicator[], char currentSide) {
+    bool validResult = false;
+    int result[2];
+    while (!validResult) {
+        int row;
+        int col;
+        checkBounds(indicator, &row, &col);
+        int value = strcmp(indicator, "from");
+        if (value == 0) {
+            if (board[row][col].side == currentSide) {
+                validResult = true;
+                result[0] = row;
+                result[1] = col;
+            } else {
+                printf("Invalid option\n");
+            }
+        } else {
+            if (board[row][col].side == ' ') {
+                validResult = true;
+                result[0] = row;
+                result[1] = col;
+            } else {
+                printf("Invalid option\n");
+            }
+        }
+    }
+    return getPiece(result);
+}
+
 void makeMove(Name name, char currentSide) {
     bool valid = false;
-    int fromResult[2];
-    int toResult[2];
     while (!valid) {
         printf("%s turn", name);
-        char fromIndicator[] = "from";
-        checkMove(fromIndicator, currentSide, fromResult);
-        char toIndicator[] = "to";
-        checkMove(toIndicator, currentSide, toResult);
-        if (checkValid(fromResult, toResult, currentSide)) {
+        if (checkValid(checkMove("from", currentSide), checkMove("to", currentSide), currentSide)) {
             valid = true;
         } else {
             printf("Invalid option\n");
