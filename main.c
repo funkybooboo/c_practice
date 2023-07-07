@@ -2,11 +2,11 @@
 // Created by Nathan Stott on 28/06/2023.
 //
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 #include<string.h>
 
 #define BOARDSIZE 8
+#define NUMPIECES 24
 
 typedef char Name[25];
 
@@ -24,7 +24,7 @@ typedef struct {
 } Pair;
 
 Piece board[BOARDSIZE][BOARDSIZE];
-Piece list[24];
+Piece list[NUMPIECES];
 int xNum = 12;
 int oNum = 12;
 
@@ -104,12 +104,6 @@ Piece checkBounds(const char *indicator) {
         printf("%s: ", indicator);
         scanf("%s", move);
         printf("\n");
-        if (((int)move[1]) - 1 < 8 && ((int)move[1]) - 1 >= 0) {
-            col = ((int)move[1]) - 1;
-            validCol = true;
-        } else {
-            printf("Invalid cell\n");
-        }
         switch (move[0]) {
             case 'A':
                 validRow = true;
@@ -142,6 +136,42 @@ Piece checkBounds(const char *indicator) {
             case 'H':
                 validRow = true;
                 row = 7;
+                break;
+            default:
+                printf("Invalid cell\n");
+        }
+        switch (move[1]) {
+            case '1':
+                validCol = true;
+                col = 0;
+                break;
+            case '2':
+                validCol = true;
+                col = 1;
+                break;
+            case '3':
+                validCol = true;
+                col = 2;
+                break;
+            case '4':
+                validCol = true;
+                col = 3;
+                break;
+            case '5':
+                validCol = true;
+                col = 4;
+                break;
+            case '6':
+                validCol = true;
+                col = 5;
+                break;
+            case '7':
+                validCol = true;
+                col = 6;
+                break;
+            case '8':
+                validCol = true;
+                col = 7;
                 break;
             default:
                 printf("Invalid cell\n");
@@ -272,14 +302,67 @@ Pair canJump(Piece piece, char otherSide) {
     return none;
 }
 
+bool canSlide(Piece piece) {
+    Piece topRight = board[piece.row-1][piece.col+1];
+    Piece bottomRight = board[piece.row+1][piece.col+1];
+    Piece topLeft = board[piece.row-1][piece.col-1];
+    Piece bottomLeft = board[piece.row+1][piece.col-1];
+    return topRight.side == ' ' || bottomRight.side == ' ' || topLeft.side == ' ' || bottomLeft.side == ' ';
+}
+
 void getUserCoordinates(Piece piece, char cord[]) {
     switch (piece.row) {
-
+        case 0:
+            cord[0] = 'A';
+            break;
+        case 1:
+            cord[0] = 'B';
+            break;
+        case 2:
+            cord[0] = 'C';
+            break;
+        case 3:
+            cord[0] = 'D';
+            break;
+        case 4:
+            cord[0] = 'E';
+            break;
+        case 5:
+            cord[0] = 'F';
+            break;
+        case 6:
+            cord[0] = 'G';
+            break;
+        case 7:
+            cord[0] = 'H';
+            break;
     }
     switch (piece.col) {
-
+        case 0:
+            cord[1] = '1';
+            break;
+        case 1:
+            cord[1] = '2';
+            break;
+        case 2:
+            cord[1] = '3';
+            break;
+        case 3:
+            cord[1] = '4';
+            break;
+        case 4:
+            cord[1] = '5';
+            break;
+        case 5:
+            cord[1] = '6';
+            break;
+        case 6:
+            cord[1] = '7';
+            break;
+        case 7:
+            cord[1] = '8';
+            break;
     }
-
 }
 
 void jumping(Piece fromPiece, Piece toPiece, char currentSide, char otherSide) {
@@ -380,9 +463,14 @@ bool checkWinner() {
     if (xNum == 0 || oNum == 0) {
         return true;
     }
-    // TODO check if no one can move
-
-    return 0;
+    // check if no one can move
+    for (int i = 0; i < NUMPIECES; i++) {
+        Piece piece = list[i];
+        if (piece.isAlive && canSlide(piece)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool go(char name[], char currentSide) {
