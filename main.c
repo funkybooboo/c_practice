@@ -199,7 +199,6 @@ void jump(Piece fromPiece, Piece toPiece, Piece middlePiece) {
     middlePiece.side = ' ';
     middlePiece.isAlive = false;
     middlePiece.type = 'b';
-
 }
 
 Pair isJump(Piece fromPiece, Piece toPiece, char otherSide) {
@@ -276,7 +275,6 @@ bool isSlide(Piece fromPiece, Piece toPiece) {
 }
 
 Pair canJump(Piece piece, char otherSide) {
-
     Pair bottomRight = isJump(piece, board[piece.row+2][piece.col+2], otherSide);
     if (bottomRight.valid) {
         return bottomRight;
@@ -400,9 +398,7 @@ void jumping(Piece fromPiece, Piece toPiece, char currentSide, char otherSide) {
 }
 
 bool move(Piece fromPiece, Piece toPiece, char currentSide) {
-
     char otherSide;
-
     if (currentSide == 'O') {
         otherSide = 'X';
     }
@@ -425,38 +421,25 @@ bool move(Piece fromPiece, Piece toPiece, char currentSide) {
 }
 
 Piece getChoice(char indicator[], char currentSide) {
-    bool validResult = false;
     Piece piece;
-    while (!validResult) {
+    while (true) {
         piece = checkBounds(indicator);
         int value = strcmp(indicator, "from");
         if (value == 0) {
             if (piece.side == currentSide) {
-                validResult = true;
+                break;
             } else {
                 printf("Invalid option\n");
             }
         } else {
             if (piece.side == ' ') {
-                validResult = true;
+                break;
             } else {
                 printf("Invalid option\n");
             }
         }
     }
     return piece;
-}
-
-void makeMove(Name name, char currentSide) {
-    bool valid = false;
-    while (!valid) {
-        printf("%s turn", name);
-        if (move(getChoice("from", currentSide), getChoice("to", currentSide), currentSide)) {
-            valid = true;
-        } else {
-            printf("Invalid option\n");
-        }
-    }
 }
 
 bool checkWinner() {
@@ -473,14 +456,17 @@ bool checkWinner() {
     return true;
 }
 
-bool go(char name[], char currentSide) {
+bool makeMove(Name name, char player) {
     printBoard();
-    makeMove(name, currentSide);
-    if (checkWinner()) {
-        printf("%s won!", name);
-        return true;
+    while (true) {
+        printf("%s turn", name);
+        if (move(getChoice("from", player), getChoice("to", player), player)) {
+            break;
+        } else {
+            printf("Invalid option\n");
+        }
     }
-    return false;
+    return checkWinner();
 }
 
 void play() {
@@ -493,11 +479,13 @@ void play() {
     scanf("%s", name2);
     printf("\n");
     makeBoard();
-    while (1) {
-        if (go(name1, 'X')) {
+    while (true) {
+        if (makeMove(name1, 'X')) {
+            printf("%s won!", name1);
             break;
         }
-        if (go(name2, 'O')) {
+        if (makeMove(name2, 'O')) {
+            printf("%s won!", name2);
             break;
         }
     }
@@ -514,19 +502,14 @@ int main() {
     if (option == '1') {
         char line[255];
         FILE *fptr = fopen("Checkers/Rules.txt", "r");
-        while (fgets(line, 255, fptr)) {
-            printf("%s\n", line);
-        }
+        while (fgets(line, 255, fptr)) printf("%s\n", line);
         fclose(fptr);
-        bool done = false;
-        while (!done) {
-            printf("Play game (p)\n");
+        while (true) {
+            printf("Enter any key to play game\n");
             printf("Enter: ");
             scanf("%c", &option);
             printf("\n");
-            if (option == 'p') {
-                done = true;
-            }
+            break;
         }
     }
     play();
